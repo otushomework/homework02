@@ -44,6 +44,7 @@ inline auto lex_sort( const IpAddress& rval, const IpAddress& lval )
     return false;
 }
 
+//$ ip_filter < ip_filter.tsv
 int main(int argc, char const *argv[])
 {
     //unused warnings
