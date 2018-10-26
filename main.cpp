@@ -3,6 +3,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+
+using IpAddress = std::vector<std::string>;
+using Filter = std::map<int, std::string>;
+using FilterRes = std::map<int, bool>;
 
 // ("",  '.') -> [""]
 // ("11", '.') -> ["11"]
@@ -10,9 +15,9 @@
 // ("11.", '.') -> ["11", ""]
 // (".11", '.') -> ["", "11"]
 // ("11.22", '.') -> ["11", "22"]
-std::vector<std::string> split(const std::string &str, char d)
+auto split(const std::string &str, char d)
 {
-    std::vector<std::string> r;
+    IpAddress r;
 
     std::string::size_type start = 0;
     std::string::size_type stop = str.find_first_of(d);
@@ -29,96 +34,76 @@ std::vector<std::string> split(const std::string &str, char d)
     return r;
 }
 
+inline auto lex_sort( const IpAddress& rval, const IpAddress& lval )
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        if ( std::stoi( rval.at(i) ) != std::stoi( lval.at(i) ) )
+            return std::stoi( rval.at(i) ) > std::stoi( lval.at(i) );
+    }
+    return false;
+}
+
 int main(int argc, char const *argv[])
 {
+    //unused warnings
+    (void)argc;
+    (void)argv;
+
     try
     {
-        std::vector<std::vector<std::string>> ip_pool;
+        std::vector<IpAddress> ip_pool;
 
         for(std::string line; std::getline(std::cin, line);)
         {
-            std::vector<std::string> v = split(line, '\t');
+            auto v = split(line, '\t');
             ip_pool.push_back(split(v.at(0), '.'));
         }
 
-        // TODO reverse lexicographically sort
+        // reverse lexicographical sort
+        std::sort( ip_pool.begin(), ip_pool.end(), lex_sort );
 
-        for(std::vector<std::vector<std::string> >::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
-        {
-            for(std::vector<std::string>::const_iterator ip_part = ip->cbegin(); ip_part != ip->cend(); ++ip_part)
+        auto printer = [&](const Filter filter){
+            for(std::vector<IpAddress>::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
             {
-                if (ip_part != ip->cbegin())
+                FilterRes filterRes;
+
+                std::string buffer;
+                for(IpAddress::const_iterator ip_part = ip->cbegin(); ip_part != ip->cend(); ++ip_part)
                 {
-                    std::cout << ".";
+                    int distance = filter.find( -1 ) != filter.end() ? -1 : std::distance(ip->cbegin(), ip_part);
 
+                    if ( filter.find( distance ) != filter.end() )
+                    {
+                        filterRes.insert(std::pair<int, bool>(std::distance(ip->cbegin(), ip_part), *ip_part == filter.at(distance)));
+                    }
+
+                    if (ip_part != ip->cbegin())
+                        buffer.append(".");
+
+                    buffer.append(*ip_part);
                 }
-                std::cout << *ip_part;
+
+                //print if we have equals
+                bool match = true;
+                for (FilterRes::const_iterator fi = filterRes.cbegin(); fi != filterRes.cend(); ++fi)
+                {
+                    match = fi->second;
+
+                    if ( (filter.find( -1 ) == filter.end() && !match) || (filter.find( -1 ) != filter.end() && match) )
+                        break;
+                }
+
+                if (match)
+                    std::cout << buffer << std::endl;
             }
-            std::cout << std::endl;
-        }
+        };
 
-        // 222.173.235.246
-        // 222.130.177.64
-        // 222.82.198.61
-        // ...
-        // 1.70.44.170
-        // 1.29.168.152
-        // 1.1.234.8
-
-        // TODO filter by first byte and output
-        // ip = filter(1)
-
-        // 1.231.69.33
-        // 1.87.203.225
-        // 1.70.44.170
-        // 1.29.168.152
-        // 1.1.234.8
-
-        // TODO filter by first and second bytes and output
-        // ip = filter(46, 70)
-
-        // 46.70.225.39
-        // 46.70.147.26
-        // 46.70.113.73
-        // 46.70.29.76
-
-        // TODO filter by any byte and output
-        // ip = filter_any(46)
-
-        // 186.204.34.46
-        // 186.46.222.194
-        // 185.46.87.231
-        // 185.46.86.132
-        // 185.46.86.131
-        // 185.46.86.131
-        // 185.46.86.22
-        // 185.46.85.204
-        // 185.46.85.78
-        // 68.46.218.208
-        // 46.251.197.23
-        // 46.223.254.56
-        // 46.223.254.56
-        // 46.182.19.219
-        // 46.161.63.66
-        // 46.161.61.51
-        // 46.161.60.92
-        // 46.161.60.35
-        // 46.161.58.202
-        // 46.161.56.241
-        // 46.161.56.203
-        // 46.161.56.174
-        // 46.161.56.106
-        // 46.161.56.106
-        // 46.101.163.119
-        // 46.101.127.145
-        // 46.70.225.39
-        // 46.70.147.26
-        // 46.70.113.73
-        // 46.70.29.76
-        // 46.55.46.98
-        // 46.49.43.85
-        // 39.46.86.85
-        // 5.189.203.46
+        // simple filter
+        printer(Filter{});
+        printer(Filter{{0, "1"}});
+        printer(Filter{{0, "46"}, {1, "70"}});
+        printer(Filter{{-1, "46"}});
     }
     catch(const std::exception &e)
     {
