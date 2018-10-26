@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 using IpAddress = std::vector<std::string>;
 using Filter = std::map<int, std::string>;
