@@ -12,12 +12,6 @@ using IpAddressInt = unsigned int;
 using Filter = std::map<int, int>;
 using FilterRes = std::map<int, bool>;
 
-// ("",  '.') -> [""]
-// ("11", '.') -> ["11"]
-// ("..", '.') -> ["", "", ""]
-// ("11.", '.') -> ["11", ""]
-// (".11", '.') -> ["", "11"]
-// ("11.22", '.') -> ["11", "22"]
 auto split(const std::string &str, char d)
 {
     IpAddressStr r;
@@ -37,18 +31,6 @@ auto split(const std::string &str, char d)
     return r;
 }
 
-std::string join_ip(const std::vector<std::string> &lst, const std::string &delim)
-{
-    std::string ret;
-    for(const auto &s : lst)
-    {
-        if(!ret.empty())
-            ret += delim;
-        ret += s;
-    }
-    return ret;
-}
-
 //$ ip_filter < ip_filter.tsv
 int main(int, char const *[])
 {
@@ -63,9 +45,6 @@ int main(int, char const *[])
             IpAddressInt converted = (((std::stoi(ip_val.at(0))) * 256 + std::stoi(ip_val.at(1))) * 256 + std::stoi(ip_val.at(2))) * 256 + std::stoi(ip_val.at(3));
 
             ip_pool.push_back(converted);
-
-            //for debug
-            //std::cout << "converted " << join_ip(ip_val, ".") << " -> " << converted << std::endl;
         }
 
         // reverse lexicographical sort
