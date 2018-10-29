@@ -7,8 +7,9 @@
 #include <algorithm>
 
 
-using IpAddress = std::vector<std::string>;
-using Filter = std::map<int, std::string>;
+using IpAddressStr = std::vector<std::string>;
+using IpAddressInt = unsigned int;
+using Filter = std::map<int, int>;
 using FilterRes = std::map<int, bool>;
 
 // ("",  '.') -> [""]
@@ -19,7 +20,7 @@ using FilterRes = std::map<int, bool>;
 // ("11.22", '.') -> ["11", "22"]
 auto split(const std::string &str, char d)
 {
-    IpAddress r;
+    IpAddressStr r;
 
     std::string::size_type start = 0;
     std::string::size_type stop = str.find_first_of(d);
@@ -36,55 +37,61 @@ auto split(const std::string &str, char d)
     return r;
 }
 
-inline auto lex_sort( const IpAddress& rval, const IpAddress& lval )
+std::string join_ip(const std::vector<std::string> &lst, const std::string &delim)
 {
-    for (int i = 0; i < 3; ++i)
+    std::string ret;
+    for(const auto &s : lst)
     {
-        if ( std::stoi( rval.at(i) ) != std::stoi( lval.at(i) ) )
-            return std::stoi( rval.at(i) ) > std::stoi( lval.at(i) );
+        if(!ret.empty())
+            ret += delim;
+        ret += s;
     }
-    return false;
+    return ret;
 }
 
 //$ ip_filter < ip_filter.tsv
-int main(int argc, char const *argv[])
+int main(int, char const *[])
 {
-    //unused warnings
-    (void)argc;
-    (void)argv;
-
     try
     {
-        std::vector<IpAddress> ip_pool;
+        std::vector<IpAddressInt> ip_pool;
 
         for(std::string line; std::getline(std::cin, line);)
         {
             auto v = split(line, '\t');
-            ip_pool.push_back(split(v.at(0), '.'));
+            auto ip_val = split(v.at(0), '.');
+            IpAddressInt converted = (((std::stoi(ip_val.at(0))) * 256 + std::stoi(ip_val.at(1))) * 256 + std::stoi(ip_val.at(2))) * 256 + std::stoi(ip_val.at(3));
+
+            ip_pool.push_back(converted);
+
+            //for debug
+            //std::cout << "converted " << join_ip(ip_val, ".") << " -> " << converted << std::endl;
         }
 
         // reverse lexicographical sort
-        std::sort( ip_pool.begin(), ip_pool.end(), lex_sort );
+        std::sort( ip_pool.begin(), ip_pool.end(), std::greater<IpAddressInt>() );
 
         auto printer = [&](const Filter filter){
-            for(std::vector<IpAddress>::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
+            for(std::vector<IpAddressInt>::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
             {
                 FilterRes filterRes;
 
                 std::string buffer;
-                for(IpAddress::const_iterator ip_part = ip->cbegin(); ip_part != ip->cend(); ++ip_part)
+                for (int i = 3; i >= 0; --i)
                 {
-                    int distance = filter.find( -1 ) != filter.end() ? -1 : std::distance(ip->cbegin(), ip_part);
+                    int distance = filter.find( -1 ) != filter.end() ? -1 : 3-i;
+
+                    int octet = (*ip >> (8*i)) & 0xff;
 
                     if ( filter.find( distance ) != filter.end() )
                     {
-                        filterRes.insert(std::pair<int, bool>(std::distance(ip->cbegin(), ip_part), *ip_part == filter.at(distance)));
+                        filterRes.insert(std::pair<int, bool>(3-i, octet == filter.at(distance)));
                     }
 
-                    if (ip_part != ip->cbegin())
+                    if (i != 3)
                         buffer.append(".");
 
-                    buffer.append(*ip_part);
+                    buffer.append(std::to_string(octet));
                 }
 
                 //print if we have equals
@@ -104,9 +111,9 @@ int main(int argc, char const *argv[])
 
         // simple filter
         printer(Filter{});
-        printer(Filter{{0, "1"}});
-        printer(Filter{{0, "46"}, {1, "70"}});
-        printer(Filter{{-1, "46"}});
+        printer(Filter{{0, 1}});
+        printer(Filter{{0, 46}, {1, 70}});
+        printer(Filter{{-1, 46}});
     }
     catch(const std::exception &e)
     {
