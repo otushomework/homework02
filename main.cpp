@@ -81,7 +81,7 @@ int main(int, char const *[])
                 {
                     int distance = filter.find( -1 ) != filter.end() ? -1 : 3-i;
 
-                    int octet = (*ip >> (8*i)) & 0xff;
+                    unsigned char octet = (*ip >> (8*i)) & 0xff;
 
                     if ( filter.find( distance ) != filter.end() )
                     {
